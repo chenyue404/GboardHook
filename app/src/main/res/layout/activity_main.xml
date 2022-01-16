@@ -1,10 +1,38 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:gravity="center"
     android:orientation="vertical">
 
+    <EditText
+        android:id="@+id/et0"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:hint="剪切板容量，默认10"
+        android:inputType="number"
+        android:numeric="integer"
+        android:singleLine="true" />
+
+    <EditText
+        android:id="@+id/et1"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:hint="剪切板保存时间，默认3天，单位毫秒"
+        android:inputType="number"
+        android:numeric="integer"
+        android:singleLine="true" />
+
+    <Button
+        android:id="@+id/bt0"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="应用" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:text="应用之后需要重启Gboard\n首次应用需要重启手机" />
 
 </LinearLayout>

@@ -1,21 +1,21 @@
 package com.chenyue404.gboardhook
 
 import android.content.SharedPreferences
-import android.database.Cursor
-import android.inputmethodservice.InputMethodService
-import android.net.Uri
-import de.robv.android.xposed.*
+import de.robv.android.xposed.IXposedHookLoadPackage
+import de.robv.android.xposed.XC_MethodHook
+import de.robv.android.xposed.XSharedPreferences
+import de.robv.android.xposed.XposedHelpers
 import de.robv.android.xposed.callbacks.XC_LoadPackage
-import java.util.*
-import kotlin.collections.ArrayList
 
 class PluginEntry : IXposedHookLoadPackage {
     companion object {
         const val SP_FILE_NAME = "GboardinHook"
-        const val SP_KEY = "color"
+        const val SP_KEY = "key"
         const val TAG = "xposed-Gboard-hook-"
         const val PACKAGE_NAME = "com.google.android.inputmethod.latin"
         const val DAY: Long = 1000 * 60 * 60 * 24
+        const val DEFAULT_NUM = 10
+        const val DEFAULT_TIME = DAY * 3
 
         fun getPref(): SharedPreferences? {
             val pref = XSharedPreferences(BuildConfig.APPLICATION_ID, SP_FILE_NAME)
@@ -24,7 +24,7 @@ class PluginEntry : IXposedHookLoadPackage {
     }
 
     private fun log(str: String) {
-        XposedBridge.log(TAG + "\n" + str)
+//        XposedBridge.log(TAG + "\n" + str)
     }
 
     override fun handleLoadPackage(lpparam: XC_LoadPackage.LoadPackageParam) {
@@ -43,7 +43,11 @@ class PluginEntry : IXposedHookLoadPackage {
             object : XC_MethodHook() {
                 override fun beforeHookedMethod(param: MethodHookParam) {
                     log("com.google.android.apps.inputmethod.libs.clipboard.ClipboardContentProvider#b")
-                    param.result = 10
+                    val num = getPref()?.getString(SP_KEY, null)?.split(",")?.get(0)?.toIntOrNull()
+                        ?: DEFAULT_NUM
+                    log(num.toString())
+                    param.result = num
+
                 }
             }
         )
@@ -55,7 +59,11 @@ class PluginEntry : IXposedHookLoadPackage {
             object : XC_MethodHook() {
                 override fun beforeHookedMethod(param: MethodHookParam) {
                     log("com.google.android.apps.inputmethod.libs.clipboard.ClipboardContentProvider#c")
-                    param.result = DAY * 3
+                    val time: Long =
+                        getPref()?.getString(SP_KEY, null)?.split(",")?.get(1)?.toLongOrNull()
+                            ?: DEFAULT_TIME
+                    log(time.toString())
+                    param.result = time
                 }
             }
         )

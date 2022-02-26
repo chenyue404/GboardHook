@@ -31,7 +31,10 @@ class PluginEntry : IXposedHookLoadPackage {
         val packageName = lpparam.packageName
         val classLoader = lpparam.classLoader
 
-        if (packageName != PACKAGE_NAME) {
+        if (packageName != PACKAGE_NAME &&
+            getPref()?.getString(SP_KEY, null)?.split(",")?.getOrNull(2)
+                ?.equals("true", true) == false
+        ) {
             return
         }
 

@@ -5,6 +5,12 @@
     android:gravity="center"
     android:orientation="vertical">
 
+    <Switch
+        android:id="@+id/sw0"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="忽略包名限制（改了Gboard包名的勾上，一般人忽略）" />
+
     <EditText
         android:id="@+id/et0"
         android:layout_width="wrap_content"

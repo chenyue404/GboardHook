@@ -9,6 +9,7 @@ import android.os.Bundle
 import android.util.Log
 import android.widget.Button
 import android.widget.EditText
+import android.widget.Switch
 import android.widget.Toast
 
 /**
@@ -20,6 +21,7 @@ class MainActivity : Activity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
+        val sw0 = findViewById<Switch>(R.id.sw0)
         val et0 = findViewById<EditText>(R.id.et0)
         val et1 = findViewById<EditText>(R.id.et1)
         val bt0 = findViewById<Button>(R.id.bt0)
@@ -32,14 +34,17 @@ class MainActivity : Activity() {
             null
         }
 
-        pref?.getString(PluginEntry.SP_KEY, null)?.split(",")?.let {
-            et0.text.append(it[0])
-            et1.text.append(it[1])
+        pref?.getString(PluginEntry.SP_KEY, null)?.split(",")?.let { list ->
+            et0.text.append(list[0])
+            et1.text.append(list[1])
+            val switchOn = list.getOrNull(2)?.equals("true", true) ?: false
+            sw0.isChecked = switchOn
         }
         bt0.setOnClickListener {
             val num = et0.text.toString().toIntOrNull() ?: PluginEntry.DEFAULT_NUM
             val time = et1.text.toString().toLongOrNull() ?: PluginEntry.DEFAULT_TIME
-            pref?.edit()?.putString(PluginEntry.SP_KEY, "$num,$time")?.apply()
+            val switchOn = sw0.isChecked.toString()
+            pref?.edit()?.putString(PluginEntry.SP_KEY, "$num,$time,$switchOn")?.apply()
 
             startActivity(
                 Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS)

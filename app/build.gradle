@@ -10,8 +10,8 @@ android {
         applicationId "com.chenyue404.gboardhook"
         minSdk 23
         targetSdk 31
-        versionCode 3
-        versionName "1.0.2"
+        versionCode 4
+        versionName "1.0.3"
     }
 
     buildTypes {
@@ -27,10 +27,12 @@ android {
     kotlinOptions {
         jvmTarget = '1.8'
     }
+    namespace 'com.chenyue404.gboardhook'
 }
 
 dependencies {
     implementation 'androidx.core:core-ktx:1.7.0'
+//    implementatio 'de.robv.android.xposed:api:82'
     compileOnly 'de.robv.android.xposed:api:82'
     compileOnly 'de.robv.android.xposed:api:82:sources'
 }

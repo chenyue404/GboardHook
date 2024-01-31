@@ -8,12 +8,16 @@ import de.robv.android.xposed.XSharedPreferences
 import de.robv.android.xposed.XposedBridge
 import de.robv.android.xposed.XposedHelpers.*
 import de.robv.android.xposed.callbacks.XC_LoadPackage
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 
 class PluginEntry : IXposedHookLoadPackage {
     companion object {
         const val SP_FILE_NAME = "GboardinHook"
         const val SP_KEY = "key"
+        const val SP_KEY_LOG = "key_log"
         const val TAG = "xposed-Gboard-hook-"
         const val PACKAGE_NAME = "com.google.android.inputmethod.latin"
         const val DAY: Long = 1000 * 60 * 60 * 24
@@ -26,8 +30,23 @@ class PluginEntry : IXposedHookLoadPackage {
         }
     }
 
+    private val clipboardTextSize by lazy {
+        getPref()?.getString(SP_KEY, null)?.split(",")?.get(0)?.toIntOrNull()
+            ?: DEFAULT_NUM
+    }
+
+    private val clipboardTextTime by lazy {
+        getPref()?.getString(SP_KEY, null)?.split(",")?.get(1)?.toLongOrNull()
+            ?: DEFAULT_TIME
+    }
+
+    private val logSwitch by lazy {
+        getPref()?.getBoolean(SP_KEY_LOG, false) ?: false
+    }
+
     private fun log(str: String) {
-        XposedBridge.log(TAG + "\n" + str)
+        if (logSwitch)
+            XposedBridge.log(TAG + "\n" + str)
     }
 
     override fun handleLoadPackage(lpparam: XC_LoadPackage.LoadPackageParam) {
@@ -49,13 +68,7 @@ class PluginEntry : IXposedHookLoadPackage {
                 "b",
                 object : XC_MethodHook() {
                     override fun beforeHookedMethod(param: MethodHookParam) {
-                        log("com.google.android.apps.inputmethod.libs.clipboard.ClipboardContentProvider#b")
-                        val num =
-                            getPref()?.getString(SP_KEY, null)?.split(",")?.get(0)?.toIntOrNull()
-                                ?: DEFAULT_NUM
-                        log(num.toString())
-                        param.result = num
-
+                        param.result = clipboardTextSize
                     }
                 }
             )
@@ -68,27 +81,7 @@ class PluginEntry : IXposedHookLoadPackage {
                 "c",
                 object : XC_MethodHook() {
                     override fun beforeHookedMethod(param: MethodHookParam) {
-                        log("com.google.android.apps.inputmethod.libs.clipboard.ClipboardContentProvider#c")
-                        val time: Long =
-                            getPref()?.getString(SP_KEY, null)?.split(",")?.get(1)?.toLongOrNull()
-                                ?: DEFAULT_TIME
-                        log(time.toString())
-                        param.result = time
-                    }
-                }
-            )
-        }
-        tryHook("Math.max") {
-            findAndHookMethod("java.lang.Math", classLoader,
-                "max",
-                Long::class.java,
-                Long::class.java,
-                object : XC_MethodHook() {
-                    override fun beforeHookedMethod(param: MethodHookParam) {
-                        log("max(${param.args.first()}, ${param.args[1]}), current=${System.currentTimeMillis()}")
-                        if (System.currentTimeMillis() - (param.args.first() as Long) < 2) {
-                            param.result = 1L
-                        }
+                        param.result = clipboardTextTime
                     }
                 }
             )
@@ -108,10 +101,6 @@ class PluginEntry : IXposedHookLoadPackage {
                         log("uri=$uri\narg1=$arg1\narg2=${arg2.joinToString()}\narg3=$arg3")
                         val indexOf = arg1.indexOf("timestamp >= ?")
                         if (indexOf != -1) {
-                            val time: Long =
-                                getPref()?.getString(SP_KEY, null)?.split(",")?.get(1)
-                                    ?.toLongOrNull()
-                                    ?: DEFAULT_TIME
                             var indexOfWen = 0
                             StringBuilder(arg1).forEachIndexed { index, c ->
                                 if (index >= indexOf) return@forEachIndexed
@@ -120,16 +109,19 @@ class PluginEntry : IXposedHookLoadPackage {
                                 }
                             }
 
-                            arg2[indexOfWen] = (System.currentTimeMillis() - time).toString()
+                            val afterTimeStamp = System.currentTimeMillis() - clipboardTextTime
+                            arg2[indexOfWen] = afterTimeStamp.toString()
                             param.args[2] = arg2
-                            log("修改时间限制")
+                            log(
+                                "修改时间限制, ${
+                                    SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.ROOT)
+                                        .format(Date(afterTimeStamp))
+                                }"
+                            )
                         }
                         if (arg3 == "timestamp DESC limit 5") {
-                            val num = getPref()?.getString(SP_KEY, null)?.split(",")?.get(0)
-                                ?.toIntOrNull()
-                                ?: DEFAULT_NUM
-                            param.args[3] = "timestamp DESC limit $num"
-                            log("修改大小限制")
+                            param.args[3] = "timestamp DESC limit $clipboardTextSize"
+                            log("修改大小限制, $clipboardTextSize")
                         }
                     }
                 })

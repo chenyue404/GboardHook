@@ -9,7 +9,13 @@
         android:id="@+id/sw0"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="忽略包名限制（改了Gboard包名的勾上，一般人忽略）" />
+        android:text="忽略包名限制（改了Gboard包名的勾上，否则忽略）" />
+
+    <Switch
+        android:id="@+id/swLog"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Log开关" />
 
     <EditText
         android:id="@+id/et0"
@@ -36,9 +42,11 @@
         android:text="应用" />
 
     <TextView
+        android:id="@+id/tvHint"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:gravity="center"
-        android:text="应用之后需要重启Gboard\n首次应用需要重启手机" />
+        android:text="应用之后需要重启Gboard\n首次应用需要重启手机\nhttps://github.com/chenyue404/GboardHook"
+        android:textIsSelectable="true" />
 
 </LinearLayout>

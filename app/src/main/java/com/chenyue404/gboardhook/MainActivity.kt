@@ -10,6 +10,7 @@ import android.util.Log
 import android.widget.Button
 import android.widget.EditText
 import android.widget.Switch
+import android.widget.TextView
 import android.widget.Toast
 
 /**
@@ -25,6 +26,7 @@ class MainActivity : Activity() {
         val et0 = findViewById<EditText>(R.id.et0)
         val et1 = findViewById<EditText>(R.id.et1)
         val bt0 = findViewById<Button>(R.id.bt0)
+        val swLog = findViewById<Switch>(R.id.swLog)
 
         val pref: SharedPreferences? = try {
             getSharedPreferences(PluginEntry.SP_FILE_NAME, Context.MODE_WORLD_READABLE)
@@ -40,11 +42,17 @@ class MainActivity : Activity() {
             val switchOn = list.getOrNull(2)?.equals("true", true) ?: false
             sw0.isChecked = switchOn
         }
+        swLog.isChecked = pref?.getBoolean(PluginEntry.SP_KEY_LOG, false) ?: false
+
         bt0.setOnClickListener {
             val num = et0.text.toString().toIntOrNull() ?: PluginEntry.DEFAULT_NUM
             val time = et1.text.toString().toLongOrNull() ?: PluginEntry.DEFAULT_TIME
             val switchOn = sw0.isChecked.toString()
-            pref?.edit()?.putString(PluginEntry.SP_KEY, "$num,$time,$switchOn")?.apply()
+            pref?.edit()?.apply {
+                putString(PluginEntry.SP_KEY, "$num,$time,$switchOn")
+                putBoolean(PluginEntry.SP_KEY_LOG, swLog.isChecked)
+                apply()
+            }
 
             startActivity(
                 Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
@@ -52,6 +60,14 @@ class MainActivity : Activity() {
                         addCategory(Intent.CATEGORY_DEFAULT)
                         data = Uri.parse("package:${PluginEntry.PACKAGE_NAME}")
                     })
+        }
+        findViewById<TextView>(R.id.tvHint).setOnClickListener {
+            startActivity(
+                Intent(
+                    Intent.ACTION_VIEW,
+                    Uri.parse("https://github.com/chenyue404/GboardHook")
+                )
+            )
         }
     }
 }

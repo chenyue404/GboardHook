@@ -1,10 +1,8 @@
 package com.chenyue404.gboardhook
 
 import android.app.Activity
-import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
-import android.net.Uri
 import android.os.Bundle
 import android.util.Log
 import android.widget.Button
@@ -12,6 +10,7 @@ import android.widget.EditText
 import android.widget.Switch
 import android.widget.TextView
 import android.widget.Toast
+import androidx.core.net.toUri
 
 /**
  * Created by cy on 2022/1/14.
@@ -29,7 +28,7 @@ class MainActivity : Activity() {
         val swLog = findViewById<Switch>(R.id.swLog)
 
         val pref: SharedPreferences? = try {
-            getSharedPreferences(PluginEntry.SP_FILE_NAME, Context.MODE_WORLD_READABLE)
+            getSharedPreferences(PluginEntry.SP_FILE_NAME, MODE_WORLD_READABLE)
         } catch (e: SecurityException) {
             Log.d("MainActivity", "getSharedPreferences失败---$e")
             Toast.makeText(this, "读取配置失败", Toast.LENGTH_SHORT).show()
@@ -58,14 +57,14 @@ class MainActivity : Activity() {
                 Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
                     .apply {
                         addCategory(Intent.CATEGORY_DEFAULT)
-                        data = Uri.parse("package:${PluginEntry.PACKAGE_NAME}")
+                        data = "package:${PluginEntry.PACKAGE_NAME}".toUri()
                     })
         }
         findViewById<TextView>(R.id.tvHint).setOnClickListener {
             startActivity(
                 Intent(
                     Intent.ACTION_VIEW,
-                    Uri.parse("https://github.com/chenyue404/GboardHook")
+                    "https://github.com/chenyue404/GboardHook".toUri()
                 )
             )
         }

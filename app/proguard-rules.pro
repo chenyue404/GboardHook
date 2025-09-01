@@ -19,3 +19,8 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+-dontwarn kotlin.jvm.internal.SourceDebugExtension
+-keep class com.chenyue404.gboardhook.PluginEntry
+-keepclassmembers class * {
+    public static ** Companion;
+}

@@ -1,15 +1,21 @@
 package com.chenyue404.gboardhook
 
+import android.app.Application
 import android.content.Context
 import android.content.SharedPreferences
 import android.database.Cursor
 import android.net.Uri
+import androidx.core.content.edit
 import de.robv.android.xposed.IXposedHookLoadPackage
 import de.robv.android.xposed.XC_MethodHook
 import de.robv.android.xposed.XSharedPreferences
 import de.robv.android.xposed.XposedBridge
-import de.robv.android.xposed.XposedHelpers.*
+import de.robv.android.xposed.XposedHelpers.ClassNotFoundError
+import de.robv.android.xposed.XposedHelpers.findAndHookMethod
 import de.robv.android.xposed.callbacks.XC_LoadPackage
+import org.luckypray.dexkit.DexKitBridge
+import org.luckypray.dexkit.wrap.DexMethod
+import java.lang.System.loadLibrary
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -25,11 +31,15 @@ class PluginEntry : IXposedHookLoadPackage {
         const val DAY: Long = 1000 * 60 * 60 * 24
         const val DEFAULT_NUM = 10
         const val DEFAULT_TIME = DAY * 3
+    }
 
-        fun getPref(): SharedPreferences? {
-            val pref = XSharedPreferences(BuildConfig.APPLICATION_ID, SP_FILE_NAME)
-            return if (pref.file.canRead()) pref else null
-        }
+    init {
+        loadLibrary("dexkit")
+    }
+
+    private fun getPref(): SharedPreferences? {
+        val pref = XSharedPreferences(BuildConfig.APPLICATION_ID, SP_FILE_NAME)
+        return if (pref.file.canRead()) pref else null
     }
 
     private val clipboardTextSize by lazy {
@@ -62,112 +72,75 @@ class PluginEntry : IXposedHookLoadPackage {
             return
         }
 
-        tryHook("com.google.android.apps.inputmethod.libs.clipboard.ClipboardContentProvider#b") {
-            //粘贴板最大展示量
-            findAndHookMethod(
-                "com.google.android.apps.inputmethod.libs.clipboard.ClipboardContentProvider",
-                classLoader,
-                "b",
-                object : XC_MethodHook() {
-                    override fun beforeHookedMethod(param: MethodHookParam) {
-                        param.result = clipboardTextSize
+        findAndHookMethod(
+            Application::class.java,
+            "attach",
+            Context::class.java,
+            object : XC_MethodHook() {
+                override fun afterHookedMethod(param: MethodHookParam) {
+                    val context = param.args.first() as Context
+                    val sp = context.getSharedPreferences(
+                        "gboard_hook",
+                        Context.MODE_PRIVATE
+                    )
+                    val spKeyMethod = "SP_KEY_METHOD"
+                    val spKeyVersion = "SP_KEY_VERSION"
+                    val versionCode = context.packageManager.getPackageInfo(
+                        context.packageName,
+                        0
+                    ).versionCode
+                    val methodStr = sp.getString(spKeyMethod, null)
+                    val dexMethod: DexMethod? = methodStr?.let {
+                        try {
+                            DexMethod(it)
+                        } catch (e: Exception) {
+                            log(it)
+                            XposedBridge.log(e.toString())
+                            null
+                        }
+                    }
+                    (if (sp.getInt(spKeyVersion, -1) == versionCode
+                        && dexMethod != null
+                    ) {
+                        dexMethod
+                    } else {
+                        val method = findAdapterMethod(classLoader)
+                        if (method != null) {
+                            sp.edit {
+                                putInt(spKeyVersion, versionCode)
+                                putString(spKeyMethod, method.serialize())
+                            }
+                        }
+                        method
+                    })?.let {
+                        hookAdapter(it, classLoader)
                     }
                 }
-            )
-        }
-        tryHook("com.google.android.apps.inputmethod.libs.clipboard.ClipboardContentProvider#c") {
-            //粘贴板过期时间，毫秒
-            findAndHookMethod(
-                "com.google.android.apps.inputmethod.libs.clipboard.ClipboardContentProvider",
-                classLoader,
-                "c",
-                object : XC_MethodHook() {
-                    override fun beforeHookedMethod(param: MethodHookParam) {
-                        param.result = clipboardTextTime
-                    }
-                }
-            )
-        }
-
-//        tryHook("fgv#a") {
-//            findAndHookMethod("fgv", classLoader, "a",
+            }
+        )
+//        tryHook("com.google.android.apps.inputmethod.libs.clipboard.ClipboardContentProvider.delete(Uri,String,String[])") {
+//            findAndHookMethod(
+//                "com.google.android.apps.inputmethod.libs.clipboard.ClipboardContentProvider",
+//                classLoader,
+//                "delete",
 //                Uri::class.java,
 //                String::class.java,
 //                Array<String>::class.java,
-//                String::class.java, object : XC_MethodHook() {
+//                object : XC_MethodHook() {
 //                    override fun beforeHookedMethod(param: MethodHookParam) {
-//                        val uri = param.args.first() as Uri
-//                        val arg1 = param.args[1] as String
-//                        val arg2 = param.args[2] as Array<String>
-//                        val arg3 = param.args[3] as String
-//                        log("uri=$uri\narg1=$arg1\narg2=${arg2.joinToString()}\narg3=$arg3")
-//                        val indexOf = arg1.indexOf("timestamp >= ?")
-//                        if (indexOf != -1) {
-//                            var indexOfWen = 0
-//                            StringBuilder(arg1).forEachIndexed { index, c ->
-//                                if (index >= indexOf) return@forEachIndexed
-//                                if (c == '?') {
-//                                    indexOfWen++
-//                                }
-//                            }
-//
-//                            val afterTimeStamp = System.currentTimeMillis() - clipboardTextTime
-//                            arg2[indexOfWen] = afterTimeStamp.toString()
-//                            param.args[2] = arg2
-//                            log(
-//                                "修改时间限制, ${
-//                                    SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.ROOT)
-//                                        .format(Date(afterTimeStamp))
-//                                }"
-//                            )
-//                        }
-//                        if (arg3 == "timestamp DESC limit 5") {
-//                            param.args[3] = "timestamp DESC limit $clipboardTextSize"
-//                            log("修改大小限制, $clipboardTextSize")
-//                        }
+//                        log("com.google.android.apps.inputmethod.libs.clipboard.ClipboardContentProvider.delete(Uri,String,String[])")
+//                        val uri = param.args[0] as Uri
+//                        val str = param.args[1]
+//                        val strArr = if (param.args[2] != null) {
+//                            param.args[2] as Array<*>
+//                        } else null
+//                        log("uri=$uri, str=$str, strArr=${strArr?.joinToString() ?: "null"}")
 //                    }
-//                })
+//                }
+//            )
 //        }
 
-        tryHook("fhv#d(context,Collection)") {
-            findAndHookMethod(
-                "fhv", classLoader,
-                "d",
-                Context::class.java,
-                Collection::class.java,
-                object : XC_MethodHook() {
-                    override fun beforeHookedMethod(param: MethodHookParam) {
-                        log("fhv#e(context,Collection)")
-                        val collection = param.args[1] as Collection<*>
-                        log(collection.joinToString())
-                    }
-                }
-            )
-        }
-
-        tryHook("com.google.android.apps.inputmethod.libs.clipboard.ClipboardContentProvider.delete(Uri,String,String[])") {
-            findAndHookMethod(
-                "com.google.android.apps.inputmethod.libs.clipboard.ClipboardContentProvider",
-                classLoader,
-                "delete",
-                Uri::class.java,
-                String::class.java,
-                Array<String>::class.java,
-                object : XC_MethodHook() {
-                    override fun beforeHookedMethod(param: MethodHookParam) {
-                        log("com.google.android.apps.inputmethod.libs.clipboard.ClipboardContentProvider.delete(Uri,String,String[])")
-                        val uri = param.args[0] as Uri
-                        val str = param.args[1]
-                        val strArr = if (param.args[2] != null) {
-                            param.args[2] as Array<*>
-                        } else null
-                        log("uri=$uri, str=$str, strArr=${strArr?.joinToString() ?: "null"}")
-                    }
-                }
-            )
-        }
-
-        tryHook("com.google.android.apps.inputmethod.libs.clipboard.ClipboardContentProvider.query") {
+        tryHook("com.google.android.apps.inputmethod.libs.clipboard.ClipboardContentProvider#query") { name ->
             findAndHookMethod(
                 "com.google.android.apps.inputmethod.libs.clipboard.ClipboardContentProvider",
                 classLoader,
@@ -179,7 +152,7 @@ class PluginEntry : IXposedHookLoadPackage {
                 String::class.java,
                 object : XC_MethodHook() {
                     override fun beforeHookedMethod(param: MethodHookParam) {
-                        log("com.google.android.apps.inputmethod.libs.clipboard.ClipboardContentProvider.query")
+                        log(name)
                         val arg0 = param.args[0] as Uri
                         val arg1 = if (param.args[1] != null) {
                             param.args[1] as Array<*>
@@ -225,59 +198,132 @@ class PluginEntry : IXposedHookLoadPackage {
                 }
             )
         }
-
-        tryHook("qcy#a") {
-            findAndHookMethod("qcy", classLoader, "a",
-                String::class.java,
-                Boolean::class.java,
-                object : XC_MethodHook() {
-                    override fun beforeHookedMethod(param: MethodHookParam) {
-                        return
-//                        log("qcy#a")
-                        val str = param.args[0].toString()
-                        val value = param.args[1] as Boolean
-//                        log("qcy#a, str=$str, value=$value")
-                        val modify = when (str) {
-                            "enable_clipboard_entity_extraction",
-                            "enable_settings_search",
-                            "enable_settings_two_pane_display",
-                            -> true
-
-                            else -> null
-                        }
-                        if (modify == true) {
-                            log("qcy#a, str=$str, value=$value")
-                            param.args[1] = true
-                        }
-                    }
-
-                    override fun afterHookedMethod(param: MethodHookParam) {
-                        if (param.args[0] == "enable_clipboard_entity_extraction") {
-                            log("qcy#a, ${param.result}")
-                        }
-                    }
-                })
-        }
-
-        tryHook("fij#b") {
-            findAndHookMethod("fij", classLoader, "b",
-                Uri::class.java,
-                Int::class.java,
-                object : XC_MethodHook() {
-                    override fun beforeHookedMethod(param: MethodHookParam) {
-                        log("fij#b, uri=${param.args[0]}, i=${param.args[1]}")
-                    }
-                })
-        }
+//        tryHook("android.database.sqlite.SQLiteDatabase#executeSql") {
+//            findAndHookMethod(
+//                "android.database.sqlite.SQLiteDatabase",
+//                classLoader,
+//                "executeSql",
+//                String::class.java,
+//                Array<Any>::class.java,
+//                object : XC_MethodHook() {
+//                    override fun beforeHookedMethod(param: MethodHookParam) {
+//                        log(
+//                            "android.database.sqlite.SQLiteDatabase#executeSql\n" +
+//                                    param.args.first().toString()
+//                        )
+//                    }
+//                }
+//            )
+//        }
+//        tryHook("android.database.sqlite.SQLiteDatabase#delete") {
+//            findAndHookMethod(
+//                "android.database.sqlite.SQLiteDatabase", classLoader,
+//                "delete",
+//                String::class.java,
+//                String::class.java,
+//                Array<String>::class.java,
+//                object : XC_MethodHook() {
+//                    override fun beforeHookedMethod(param: MethodHookParam) {
+//                        val table = param.args.first().toString()
+//                        log("android.database.sqlite.SQLiteDatabase#delete, $table")
+//                        if (table == "clips") {
+//                            log("whereClause=${param.args[1]}\nwhereArgs=${(param.args.last() as? Array<*>)?.joinToString()}")
+//                        }
+//                    }
+//                }
+//            )
+//        }
+//        try {
+//            val dexFile = DexFile(lpparam.appInfo.sourceDir)
+//            val entries = dexFile.entries()
+//            while (entries.hasMoreElements()) {
+//                val className = entries.nextElement()
+//                try {
+//                    val clazz = lpparam.classLoader.loadClass(className)
+//                    // 查找是否有 getDumpableTag 方法
+//                    val method = clazz.declaredMethods.firstOrNull {
+//                        it.parameterTypes.contentEquals(
+//                            arrayOf(
+//                                ImageView::class.java, ImageView::class.java, String::class.java
+//                            )
+//                        ) && it.returnType == Void.TYPE
+//                    } ?: continue
+//
+//                    // 找到了候选类，hook它
+//                    log("Hooking candidate: $className")
+//                    findAndHookMethod(
+//                        clazz,
+//                        "E",
+//                        object : XC_MethodHook() {
+//                            override fun beforeHookedMethod(param: MethodHookParam) {
+//                                val x = XposedHelpers.getIntField(param.thisObject, "x")
+//                                val p = XposedHelpers.getIntField(param.thisObject, "p")
+//                                log("$className#E, x=$x, p=$p")
+//                                XposedHelpers.setIntField(
+//                                    param.thisObject,
+//                                    "p",
+//                                    0
+//                                )
+//                            }
+//                        }
+//                    )
+//                } catch (e: Throwable) {
+//                    // 加载失败的类忽略
+//                }
+//            }
+//        } catch (e: Throwable) {
+//            log("Error scanning dex: $e")
+//        }
     }
 
-    private fun tryHook(logStr: String, unit: (() -> Unit)) {
+    private fun tryHook(logStr: String, unit: ((name: String) -> Unit)) {
         try {
-            unit()
+            unit(logStr)
         } catch (e: NoSuchMethodError) {
             log("NoSuchMethodError--$logStr")
         } catch (e: ClassNotFoundError) {
             log("ClassNotFoundError--$logStr")
+        }
+    }
+
+    private fun findAdapterMethod(classLoader: ClassLoader): DexMethod? {
+        val timeStart = System.currentTimeMillis()
+        val bridge = DexKitBridge.create(classLoader, true)
+        val methodData = bridge.findClass {
+            matcher {
+                usingStrings("com/google/android/apps/inputmethod/libs/clipboard/ClipboardAdapter")
+                superClass {
+                    this.classNameMatcher != null
+                }
+            }
+        }.findMethod {
+            matcher {
+                usingNumbers(5)
+            }
+        }.singleOrNull()
+        val duration = System.currentTimeMillis() - timeStart
+        log("duration $duration")
+        if (methodData == null) {
+            log("Can't find adapter")
+            return null
+        }
+        return methodData.toDexMethod()
+    }
+
+    private fun hookAdapter(dexMethod: DexMethod, classLoader: ClassLoader) {
+        val methodName = dexMethod.name
+        val className = dexMethod.className
+        val tag = "$className#$methodName"
+        log(tag)
+        tryHook(tag) {
+            findAndHookMethod(
+                className, classLoader, methodName,
+                object : XC_MethodHook() {
+                    override fun beforeHookedMethod(param: MethodHookParam) {
+                        log(tag)
+                        param.result = null
+                    }
+                })
         }
     }
 }

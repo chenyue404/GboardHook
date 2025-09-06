@@ -5,11 +5,14 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.database.Cursor
 import android.net.Uri
+import android.util.SparseArray
 import androidx.core.content.edit
+import androidx.core.util.size
 import de.robv.android.xposed.IXposedHookLoadPackage
 import de.robv.android.xposed.XC_MethodHook
 import de.robv.android.xposed.XSharedPreferences
 import de.robv.android.xposed.XposedBridge
+import de.robv.android.xposed.XposedHelpers
 import de.robv.android.xposed.XposedHelpers.ClassNotFoundError
 import de.robv.android.xposed.XposedHelpers.findAndHookMethod
 import de.robv.android.xposed.callbacks.XC_LoadPackage
@@ -198,41 +201,114 @@ class PluginEntry : IXposedHookLoadPackage {
                 }
             )
         }
-//        tryHook("android.database.sqlite.SQLiteDatabase#executeSql") {
-//            findAndHookMethod(
-//                "android.database.sqlite.SQLiteDatabase",
-//                classLoader,
-//                "executeSql",
-//                String::class.java,
-//                Array<Any>::class.java,
-//                object : XC_MethodHook() {
-//                    override fun beforeHookedMethod(param: MethodHookParam) {
-//                        log(
-//                            "android.database.sqlite.SQLiteDatabase#executeSql\n" +
-//                                    param.args.first().toString()
-//                        )
-//                    }
-//                }
-//            )
-//        }
-//        tryHook("android.database.sqlite.SQLiteDatabase#delete") {
-//            findAndHookMethod(
-//                "android.database.sqlite.SQLiteDatabase", classLoader,
-//                "delete",
-//                String::class.java,
-//                String::class.java,
-//                Array<String>::class.java,
-//                object : XC_MethodHook() {
-//                    override fun beforeHookedMethod(param: MethodHookParam) {
-//                        val table = param.args.first().toString()
-//                        log("android.database.sqlite.SQLiteDatabase#delete, $table")
-//                        if (table == "clips") {
-//                            log("whereClause=${param.args[1]}\nwhereArgs=${(param.args.last() as? Array<*>)?.joinToString()}")
-//                        }
-//                    }
-//                }
-//            )
-//        }
+
+        tryHook("vtn#a") {
+            findAndHookMethod(
+                "vtn",
+                classLoader,
+                "a",
+                String::class.java,
+                Boolean::class.java,
+                object : XC_MethodHook() {
+                    override fun afterHookedMethod(param: MethodHookParam) {
+                        val key = param.args.first().toString()
+                        if (key.contains("clipboard")) {
+                            log("$it-after: $key=${param.result}")
+                        }
+                    }
+                }
+            )
+        }
+
+        tryHook("com.google.android.apps.inputmethod.libs.clipboard.ClipboardKeyboard#D") {
+            findAndHookMethod(
+                "com.google.android.apps.inputmethod.libs.clipboard.ClipboardKeyboard",
+                classLoader,
+                "D",
+                "gmc",
+                object : XC_MethodHook() {
+                    override fun beforeHookedMethod(param: MethodHookParam) {
+                        log(it)
+                    }
+                }
+            )
+        }
+
+        tryHook("gmg#b") {
+            findAndHookMethod(
+                "gmg",
+                classLoader,
+                "b",
+                "java.lang.Object",
+                object : XC_MethodHook() {
+                    override fun beforeHookedMethod(param: MethodHookParam) {
+                        val list = param.args.first() as List<*>
+                        log("$it-before, size=${list.size}")
+                    }
+
+                    override fun afterHookedMethod(param: MethodHookParam) {
+                        val listO = XposedHelpers.getObjectField(param.thisObject, "a").let {
+                            XposedHelpers.getObjectField(it, "c")
+                        }.let {
+                            XposedHelpers.getObjectField(it, "o")
+                        } as List<*>
+                        log("$it-after: listO.size=${listO.size}")
+                    }
+                }
+            )
+        }
+
+        tryHook("com.google.android.apps.inputmethod.libs.clipboard.ClipboardKeyboard#J") {
+            findAndHookMethod(
+                "com.google.android.apps.inputmethod.libs.clipboard.ClipboardKeyboard",
+                classLoader,
+                "J",
+                SparseArray::class.java,
+                object : XC_MethodHook() {
+                    override fun afterHookedMethod(param: MethodHookParam) {
+                        val sparseArray = param.args.first() as SparseArray<*>
+                        val gns = XposedHelpers.getObjectField(param.thisObject, "b")
+                        val list = XposedHelpers.getObjectField(gns, "o") as List<*>
+                        log("$it-after: sparseArray.size=${sparseArray.size}, list.size=${list.size}")
+                    }
+                }
+            )
+        }
+
+        tryHook("SQLiteQuery#query") {
+            findAndHookMethod(
+                "android.database.sqlite.SQLiteDatabase",
+                classLoader,
+                "query",
+                "java.lang.String",
+                "java.lang.String[]",
+                "java.lang.String",
+                "java.lang.String[]",
+                "java.lang.String",
+                "java.lang.String",
+                "java.lang.String",
+                object : XC_MethodHook() {
+                    override fun beforeHookedMethod(param: MethodHookParam) {
+                        val args = param.args
+                        val table = args.first().toString()
+                        if (table == "clips") {
+                            val arg1 = if (param.args[1] != null) {
+                                param.args[1] as Array<*>
+                            } else null
+                            val arg2 = param.args[2].toString()
+                            val arg3 = if (param.args[3] != null) {
+                                param.args[3] as Array<String>
+                            } else null
+                            val arg4 = param.args[4]
+                            val arg5 = param.args[5]
+                            val arg6 = param.args[6]
+                            log("SQLiteQuery#query, arg1=${arg1?.joinToString()}, arg2=$arg2, arg3=${arg3?.joinToString()}, arg4=$arg4, arg5=$arg5, arg6=$arg6")
+                        }
+                    }
+                }
+            )
+        }
+
 //        try {
 //            val dexFile = DexFile(lpparam.appInfo.sourceDir)
 //            val entries = dexFile.entries()
@@ -321,9 +397,18 @@ class PluginEntry : IXposedHookLoadPackage {
                 object : XC_MethodHook() {
                     override fun beforeHookedMethod(param: MethodHookParam) {
                         log(tag)
+                        printInfo("${tag}-before", param.thisObject)
                         param.result = null
                     }
                 })
         }
+    }
+
+    private fun printInfo(tag: String, obj: Any) {
+        val p = XposedHelpers.getIntField(obj, "p")
+        val x = XposedHelpers.getIntField(obj, "x")
+        val y = XposedHelpers.getIntField(obj, "y")
+        val list = XposedHelpers.getObjectField(obj, "o") as List<*>
+        log("$tag: p=$p, x=$x, y=$y, list.size=${list.size}")
     }
 }

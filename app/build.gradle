@@ -3,6 +3,13 @@ plugins {
     id 'kotlin-android'
 }
 
+def keystorePropertiesFile = file("./AndroidKeystore/keystore.properties")
+def keystoreProperties = new Properties()
+
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+}
+
 android {
     compileSdk 31
 
@@ -16,8 +23,26 @@ android {
     lintOptions {
         disable 'ExpiredTargetSdkVersion'
     }
-    buildTypes {
+    signingConfigs {
         release {
+            if (keystorePropertiesFile.exists()) {
+                storeFile file(keystoreProperties['storeFile'])
+                storePassword keystoreProperties['storePassword']
+                keyAlias keystoreProperties['keyAlias']
+                keyPassword keystoreProperties['keyPassword']
+            } else {
+                // 如果文件不存在，可以给出默认提示或抛异常
+                println "Warning: keystore.properties not found, using debug signing."
+            }
+        }
+    }
+    buildTypes {
+        debug {
+            signingConfig signingConfigs.release
+            minifyEnabled false
+        }
+        release {
+            signingConfig signingConfigs.release
             minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }

@@ -1,3 +1,5 @@
+import java.text.SimpleDateFormat
+
 plugins {
     id 'com.android.application'
     id 'kotlin-android'
@@ -17,8 +19,8 @@ android {
         applicationId "com.chenyue404.gboardhook"
         minSdk 23
         targetSdk 31
-        versionCode 7
-        versionName "1.0.6"
+        versionCode 8
+        versionName "1.1.0"
     }
     lintOptions {
         disable 'ExpiredTargetSdkVersion'
@@ -47,6 +49,35 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
+
+    applicationVariants.all { variant ->
+        variant.outputs.all { output ->
+            // 获取版本名和版本号
+            def versionName = variant.versionName
+            def versionCode = variant.versionCode
+
+            // 获取 buildType 和 flavor
+            def buildType = variant.buildType.name
+            def flavor = variant.flavorName ?: "" // 如果没有 flavor，则为空
+            def environment = flavor ? "${flavor}_${buildType}" : buildType
+
+            // 获取当前 UTC 时间
+            def date = new Date()
+            def sdf = new SimpleDateFormat("yyyyMMdd_HHmmss")
+            sdf.setTimeZone(TimeZone.getTimeZone("UTC"))
+            def formattedDate = sdf.format(date) + "Z"
+
+            // 应用名称
+            def appName = "GboardHook"
+
+            // 构造 APK 文件名
+            def apkName = "${appName}_${environment}_${versionName}_${versionCode}_${formattedDate}.apk"
+
+            // 设置输出文件名
+            output.outputFileName = apkName
+        }
+    }
+
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17

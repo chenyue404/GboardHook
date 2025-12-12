@@ -101,7 +101,7 @@ class PluginEntry : IXposedHookLoadPackage {
                         try {
                             DexMethod(it)
                         } catch (e: Exception) {
-                            log(it)
+                            log("dexMethod-$it")
                             XposedBridge.log(e.toString())
                             null
                         }
@@ -126,7 +126,7 @@ class PluginEntry : IXposedHookLoadPackage {
                         try {
                             DexMethod(it)
                         } catch (e: Exception) {
-                            log(it)
+                            log("dexMethodReadConfig-$it")
                             XposedBridge.log(e.toString())
                             null
                         }
@@ -370,11 +370,19 @@ class PluginEntry : IXposedHookLoadPackage {
                 object : XC_MethodHook() {
                     override fun beforeHookedMethod(param: MethodHookParam) {
                         val name = XposedHelpers.getObjectField(param.thisObject, "a").toString()
-                        if (name == "enable_clipboard_entity_extraction") {
-                            log(tag)
+                        if (name == "enable_clipboard_entity_extraction"
+                            || name == "enable_clipboard_query_refactoring"
+                        ) {
                             param.result = false
                         }
                     }
+
+//                    override fun afterHookedMethod(param: MethodHookParam) {
+//                        val name = XposedHelpers.getObjectField(param.thisObject, "a").toString()
+//                        if (name.contains("clipboard")) {
+//                            log("$tag, name=$name, result=${param.result}")
+//                        }
+//                    }
                 })
         }
     }

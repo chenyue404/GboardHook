@@ -9,44 +9,42 @@
         android:id="@+id/sw0"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="忽略包名限制（改了Gboard包名的勾上，否则忽略）" />
+        android:text="@string/ignore_package_limit" />
 
     <Switch
         android:id="@+id/swLog"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Log开关" />
+        android:text="@string/log_switch" />
 
     <EditText
         android:id="@+id/et0"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:hint="剪切板容量，默认10"
+        android:hint="@string/clipboard_capacity"
         android:inputType="number"
-        android:numeric="integer"
         android:singleLine="true" />
 
     <EditText
         android:id="@+id/et1"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:hint="剪切板保存时间，默认3天，单位毫秒"
+        android:hint="@string/clipboard_expire_time"
         android:inputType="number"
-        android:numeric="integer"
         android:singleLine="true" />
 
     <Button
         android:id="@+id/bt0"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="应用" />
+        android:text="@string/apply" />
 
     <TextView
         android:id="@+id/tvHint"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:gravity="center"
-        android:text="应用之后需要重启Gboard\n首次应用需要重启手机\nhttps://github.com/chenyue404/GboardHook"
+        android:text="@string/restart_hint"
         android:textIsSelectable="true" />
 
 </LinearLayout>

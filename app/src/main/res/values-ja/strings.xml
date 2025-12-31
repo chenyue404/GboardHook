@@ -1,0 +1,16 @@
+<resources>
+    <string name="ignore_package_limit">
+        パッケージ名制限を無視（Gboardのパッケージ名を変更している場合はON）
+    </string>
+    <string name="log_switch">ログ切替</string>
+    <string name="clipboard_capacity">
+        クリップボード容量（デフォルト10）
+    </string>
+    <string name="clipboard_expire_time">
+        クリップボード保存時間（デフォルト3日・ミリ秒）
+    </string>
+    <string name="apply">適用</string>
+    <string name="restart_hint">
+        適用後はGboardを再起動してください\n初回適用時は端末の再起動が必要です\nhttps://github.com/chenyue404/GboardHook
+    </string>
+</resources>

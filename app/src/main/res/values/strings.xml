@@ -8,7 +8,5 @@
         剪切板保存时间，默认3天，单位毫秒
     </string>
     <string name="apply">应用</string>
-    <string name="restart_hint">
-        应用之后需要重启Gboard\n首次应用需要重启手机\nhttps://github.com/chenyue404/GboardHook
-    </string>
+    <string name="restart_hint">"         应用之后需要重启Gboard 首次应用需要重启手机 https://github.com/chenyue404/GboardHook     "</string>
 </resources>
